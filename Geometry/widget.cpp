@@ -18,15 +18,38 @@ Widget::Widget(QWidget *parent)
     mirrorButton->setGeometry(QRect(13,80,93,28));
     groupLayout->addWidget(hCheckBox);
     groupLayout->addWidget(vCheckBox);
+    groupLayout->addWidget(mirrorButton);
+    leftLayout->addWidget(mirrorGroup);
+    rotateDial=new QDial(this);
+    rotateDial->setNotchesVisible(true);
+    vSpacer = new QSpacerItem(20,58,QSizePolicy::Minimum,QSizePolicy::Expanding);
 
+    leftLayout->addWidget(rotateDial);
+    leftLayout->addItem(vSpacer);
+    mainLayout->addLayout(leftLayout);
+
+    inWin = new QLabel(this);
+    inWin->setScaledContents(true);
+    inWin->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
+    QPixmap *initPixmap=new QPixmap(300,200);
+    initPixmap->fill(QColor(255,255,255));
+    inWin -> setPixmap(*initPixmap);
+    mainLayout ->addWidget(inWin);
+    connect(mirrorButton,SIGNAL(clicked()),this,SLOT(mirroredImage()));
+    connect(rotateDial,SIGNAL(valueChanged(int)),this,SLOT(rotatedImage()));
 
 }
 
 
-Widget::~Widget() {}
-void Widget::mirroredImage(){
+Widget::~Widget()
+{
 
 }
-void Widget::rotateImage(){
+void Widget::mirroredImage()
+{
+
+}
+void Widget::rotateImage()
+{
 
 }
