@@ -11,6 +11,9 @@
 #include<QHBoxLayout>
 #include<QVBoxLayout>
 #include<QImage>
+#include <QFileDialog>
+#include <QMessageBox>
+
 
 class Widget : public QWidget
 {
@@ -31,10 +34,13 @@ public:
     QVBoxLayout *leftLayout;
     QImage srcImg;
     QImage dstImg;
+    QPushButton *saveButton;
+
 
 private slots:
     void mirroredImage();
     void rotateImage();
+    void saveImage();
 
 };
 #endif // WIDGET_H

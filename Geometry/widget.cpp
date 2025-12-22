@@ -1,5 +1,10 @@
 #include "widget.h"
 #include<QPixmap>
+#include <QPainter>
+
+#include <QFileDialog>
+#include <QMessageBox>
+
 
 Widget::Widget(QWidget *parent)
     : QWidget(parent)
@@ -23,20 +28,39 @@ Widget::Widget(QWidget *parent)
     rotateDial=new QDial(this);
     rotateDial->setNotchesVisible(true);
     vSpacer = new QSpacerItem(20,58,QSizePolicy::Minimum,QSizePolicy::Expanding);
+    saveButton = new QPushButton(QStringLiteral("儲存 PNG"), this);
 
+    leftLayout->addWidget(saveButton);
     leftLayout->addWidget(rotateDial);
     leftLayout->addItem(vSpacer);
     mainLayout->addLayout(leftLayout);
 
     inWin = new QLabel(this);
     inWin->setScaledContents(true);
-    inWin->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
     QPixmap *initPixmap=new QPixmap(300,200);
     initPixmap->fill(QColor(255,255,255));
-    inWin -> setPixmap(*initPixmap);
+
+    QPainter *paint = new QPainter(initPixmap);
+    paint->setPen(*(new QColor(0,0,0)));
+    paint->begin(initPixmap);
+    paint->drawRect(15,15,60,40);
+    paint->end();
+    if(srcImg.isNull()){
+        srcImg = initPixmap ->toImage();
+    }
+
+    inWin->setPixmap(*initPixmap);
+    inWin->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
+
+    if(srcImg.isNull()){
+        QPixmap *initPixmap = new QPixmap(300,200);
+        initPixmap->fill(QColor(255,255,255));
+        inWin -> setPixmap(*initPixmap);
+    }
     mainLayout ->addWidget(inWin);
     connect(mirrorButton,SIGNAL(clicked()),this,SLOT(mirroredImage()));
     connect(rotateDial,SIGNAL(valueChanged(int)),this,SLOT(rotatedImage()));
+    connect(saveButton, SIGNAL(clicked()), this, SLOT(saveImage()));
 
 }
 
@@ -47,9 +71,53 @@ Widget::~Widget()
 }
 void Widget::mirroredImage()
 {
-
+    bool H,V;
+    if(srcImg.isNull())
+        return;
+    H=hCheckBox->isChecked();
+    V=vCheckBox->isChecked();
+    dstImg = srcImg.mirrored(H,V);
+    inWin->setPixmap(QPixmap::fromImage(dstImg));
+    srcImg = dstImg;
 }
 void Widget::rotateImage()
 {
+    QTransform tran;
+    int angle;
+    if(srcImg.isNull())
+        return;
+    angle = rotateDial->value();
+    tran.rotate(angle);
+    dstImg = srcImg.transformed(tran);
+    inWin->setPixmap(QPixmap::fromImage(dstImg));
+}
+void Widget::saveImage()
+{
+    if (srcImg.isNull()) {
+        QMessageBox::warning(this,
+                             QStringLiteral("錯誤"),
+                             QStringLiteral("沒有影像可以儲存"));
+        return;
+    }
 
+    QString fileName = QFileDialog::getSaveFileName(
+        this,
+        QStringLiteral("儲存影像"),
+        "",
+        QStringLiteral("PNG Image (*.png)")
+        );
+
+    if (fileName.isEmpty())
+        return;
+
+    if (!fileName.endsWith(".png"))
+        fileName += ".png";
+
+    bool ok = srcImg.save(fileName, "PNG");
+
+    if (!ok) {
+        QMessageBox::warning(this,
+                             QStringLiteral("錯誤"),
+                             QStringLiteral("儲存失敗"));
+    }
 }
