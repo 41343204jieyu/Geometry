@@ -96,7 +96,7 @@ void Widget::saveImage()
     if (srcImg.isNull()) {
         QMessageBox::warning(this,
                              QStringLiteral("錯誤"),
-                             QStringLiteral("沒有影像可以儲存"));
+                             QStringLiteral("沒有影像"));
         return;
     }
 
