@@ -1,123 +1,131 @@
 #include "widget.h"
-#include<QPixmap>
+#include <QTransform>
 #include <QPainter>
+#include <QtMath>
 
-#include <QFileDialog>
-#include <QMessageBox>
-
-
-Widget::Widget(QWidget *parent)
-    : QWidget(parent)
+Widget::Widget(QWidget *parent) : QWidget(parent)
 {
-    mainLayout=new QHBoxLayout(this);
-    leftLayout = new QVBoxLayout(this);
-    mirrorGroup = new QGroupBox(QStringLiteral("鏡射"),this);
+    setWindowTitle("影像處理整合版");
+
+    mainLayout = new QHBoxLayout(this);
+    leftLayout = new QVBoxLayout();
+    mirrorGroup = new QGroupBox("鏡射", this);
     groupLayout  = new QVBoxLayout(mirrorGroup);
 
-    hCheckBox = new QCheckBox(QStringLiteral("水平"),mirrorGroup);
-    vCheckBox = new QCheckBox(QStringLiteral("垂直"),mirrorGroup);
-    mirrorButton = new QPushButton(QStringLiteral("執行"),mirrorGroup);
+    hCheckBox = new QCheckBox("水平", mirrorGroup);
+    vCheckBox = new QCheckBox("垂直", mirrorGroup);
+    mirrorButton = new QPushButton("執行", mirrorGroup);
 
-    hCheckBox ->setGeometry(QRect(13,28,87,19));
-    vCheckBox ->setGeometry(QRect(13,54,87,19));
-    mirrorButton->setGeometry(QRect(13,80,93,28));
     groupLayout->addWidget(hCheckBox);
     groupLayout->addWidget(vCheckBox);
     groupLayout->addWidget(mirrorButton);
+    mirrorGroup->setLayout(groupLayout);
     leftLayout->addWidget(mirrorGroup);
-    rotateDial=new QDial(this);
-    rotateDial->setNotchesVisible(true);
-    vSpacer = new QSpacerItem(20,58,QSizePolicy::Minimum,QSizePolicy::Expanding);
-    saveButton = new QPushButton(QStringLiteral("儲存 PNG"), this);
 
+    rotateDial = new QDial(this);
+    rotateDial->setNotchesVisible(true);
+    saveButton = new QPushButton("儲存影像", this);
+    openButton = new QPushButton("開啟影像", this);
+    zoomInButton = new QPushButton("放大", this);
+    zoomOutButton = new QPushButton("縮小", this);
+
+    leftLayout->addWidget(openButton);
+    leftLayout->addWidget(zoomInButton);
+    leftLayout->addWidget(zoomOutButton);
     leftLayout->addWidget(saveButton);
     leftLayout->addWidget(rotateDial);
-    leftLayout->addItem(vSpacer);
+    leftLayout->addStretch(); // 下方填滿空間
+
     mainLayout->addLayout(leftLayout);
 
+    // 右側 QLabel
     inWin = new QLabel(this);
     inWin->setScaledContents(true);
-    QPixmap *initPixmap=new QPixmap(300,200);
-    initPixmap->fill(QColor(255,255,255));
+    QPixmap initPixmap(400, 300);
+    initPixmap.fill(Qt::white);
 
-    QPainter *paint = new QPainter(initPixmap);
-    paint->setPen(*(new QColor(0,0,0)));
-    paint->begin(initPixmap);
-    paint->drawRect(15,15,60,40);
-    paint->end();
-    if(srcImg.isNull()){
-        srcImg = initPixmap ->toImage();
-    }
+    QPainter paint(&initPixmap);
+    paint.setPen(QColor(0, 0, 0));
+    paint.drawRect(10, 10, 60, 40);
+    paint.end();
 
-    inWin->setPixmap(*initPixmap);
-    inWin->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
+    displayImg = initPixmap.toImage();
+    originImg = displayImg;
+    inWin->setPixmap(initPixmap);
+    inWin->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
-    if(srcImg.isNull()){
-        QPixmap *initPixmap = new QPixmap(300,200);
-        initPixmap->fill(QColor(255,255,255));
-        inWin -> setPixmap(*initPixmap);
-    }
-    mainLayout ->addWidget(inWin);
-    connect(mirrorButton,SIGNAL(clicked()),this,SLOT(mirroredImage()));
-    connect(rotateDial,SIGNAL(valueChanged(int)),this,SLOT(rotatedImage()));
-    connect(saveButton, SIGNAL(clicked()), this, SLOT(saveImage()));
+    mainLayout->addWidget(inWin);
 
+    // 連接槽
+    connect(mirrorButton, &QPushButton::clicked, this, &Widget::mirroredImage);
+    connect(rotateDial, &QDial::valueChanged, this, &Widget::rotateImage);
+    connect(saveButton, &QPushButton::clicked, this, &Widget::saveImage);
+    connect(openButton, &QPushButton::clicked, this, &Widget::openFile);
+    connect(zoomInButton, &QPushButton::clicked, this, &Widget::zoomIn);
+    connect(zoomOutButton, &QPushButton::clicked, this, &Widget::zoomOut);
 }
 
+Widget::~Widget() {}
 
-Widget::~Widget()
+void Widget::openFile()
 {
+    QString fileName = QFileDialog::getOpenFileName(this, "開啟影像", ".", "Images (*.bmp *.png *.jpg)");
+    if (fileName.isEmpty()) return;
 
+    originImg.load(fileName);
+    displayImg = originImg;
+    scaleFactor = 1.0;
+    updateImageView();
 }
+
 void Widget::mirroredImage()
 {
-    bool H,V;
-    if(srcImg.isNull())
-        return;
-    H=hCheckBox->isChecked();
-    V=vCheckBox->isChecked();
-    dstImg = srcImg.mirrored(H,V);
-    inWin->setPixmap(QPixmap::fromImage(dstImg));
-    srcImg = dstImg;
+    if (originImg.isNull()) return;
+    displayImg = originImg.mirrored(hCheckBox->isChecked(), vCheckBox->isChecked());
+    updateImageView();
+    originImg = displayImg;
 }
+
 void Widget::rotateImage()
 {
+    if (originImg.isNull()) return;
     QTransform tran;
-    int angle;
-    if(srcImg.isNull())
-        return;
-    angle = rotateDial->value();
-    tran.rotate(angle);
-    dstImg = srcImg.transformed(tran);
-    inWin->setPixmap(QPixmap::fromImage(dstImg));
+    tran.rotate(rotateDial->value());
+    displayImg = originImg.transformed(tran);
+    updateImageView();
 }
+
 void Widget::saveImage()
 {
-    if (srcImg.isNull()) {
-        QMessageBox::warning(this,
-                             QStringLiteral("錯誤"),
-                             QStringLiteral("沒有影像"));
-        return;
+    if (originImg.isNull()) return;
+
+    QString fileName = QFileDialog::getSaveFileName(this, "儲存影像", "", "PNG Image (*.png)");
+    if (fileName.isEmpty()) return;
+    if (!fileName.endsWith(".png")) fileName += ".png";
+
+    if (!displayImg.save(fileName, "PNG")) {
+        QMessageBox::warning(this, "錯誤", "儲存失敗");
     }
+}
 
-    QString fileName = QFileDialog::getSaveFileName(
-        this,
-        QStringLiteral("儲存影像"),
-        "",
-        QStringLiteral("PNG Image (*.png)")
-        );
+void Widget::zoomIn()
+{
+    if (originImg.isNull()) return;
+    scaleFactor = qMin(scaleFactor * 1.25, 5.0);
+    updateImageView();
+}
 
-    if (fileName.isEmpty())
-        return;
+void Widget::zoomOut()
+{
+    if (originImg.isNull()) return;
+    scaleFactor = qMax(scaleFactor / 1.25, 0.2);
+    updateImageView();
+}
 
-    if (!fileName.endsWith(".png"))
-        fileName += ".png";
+void Widget::updateImageView()
+{
+    if (originImg.isNull()) return;
 
-    bool ok = srcImg.save(fileName, "PNG");
-
-    if (!ok) {
-        QMessageBox::warning(this,
-                             QStringLiteral("錯誤"),
-                             QStringLiteral("儲存失敗"));
-    }
+    QImage scaled = displayImg.scaled(displayImg.size() * scaleFactor, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    inWin->setPixmap(QPixmap::fromImage(scaled));
 }

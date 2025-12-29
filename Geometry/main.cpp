@@ -1,4 +1,3 @@
-// main.cpp
 #include <QApplication>
 #include "widget.h"
 
