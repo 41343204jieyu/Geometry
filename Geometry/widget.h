@@ -18,6 +18,9 @@
 #include <QAction>
 #include <QPixmap>
 #include <QColor>
+#include <QStatusBar>
+
+#include "imagemousewidget.h"
 
 class Widget : public QWidget
 {
@@ -28,25 +31,21 @@ public:
     ~Widget();
 
 private slots:
-    void openFile();          // 開啟影像
-    void mirroredImage();     // 鏡射
-    void rotateImage();       // 旋轉
-    void saveImage();         // 儲存
-    void zoomIn();            // 放大
-    void zoomOut();           // 縮小
+    void openFile();
+    void mirroredImage();
+    void rotateImage();
+    void saveImage();
+    void zoomIn();
+    void zoomOut();
 
 private:
-    void updateImageView();   // 更新 QLabel 顯示
-    void createActions();     // 建立功能 action
-    void createMenus();       // 建立選單
-    void createToolBars();    // 建立工具列
+    void updateImageView();
 
-    QLabel *inWin;
+    ImageMouseWidget *inWin;
     QImage originImg;
     QImage displayImg;
     double scaleFactor = 1.0;
 
-    // 左側功能區
     QGroupBox *mirrorGroup;
     QCheckBox *hCheckBox;
     QCheckBox *vCheckBox;
@@ -57,20 +56,11 @@ private:
     QPushButton *zoomInButton;
     QPushButton *zoomOutButton;
 
-    // Layout
     QHBoxLayout *mainLayout;
     QVBoxLayout *leftLayout;
     QVBoxLayout *groupLayout;
 
-    // menu & toolbar
-    QMenuBar *menuBarPtr;
-    QMenu *fileMenu;
-    QToolBar *fileTool;
-
-    QAction *openFileAction;
-    QAction *exitAction;
-    QAction *zoomInAction;
-    QAction *zoomOutAction;
+    QStatusBar *statusBar;
 };
 
 #endif // WIDGET_H
